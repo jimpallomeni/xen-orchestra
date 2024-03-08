@@ -7,6 +7,9 @@
 
 > Users must be able to say: “Nice enhancement, I'm eager to test it”
 
+- [Host/Advanced] Ability to `enable/disable` passthrough for PCIs [#7432](https://github.com/vatesfr/xen-orchestra/issues/7432) (PR [#7455](https://github.com/vatesfr/xen-orchestra/pull/7455))
+
+
 ### Bug fixes
 
 > Users must be able to say: “I had this issue, happy to know it's fixed”
@@ -26,5 +29,7 @@
 > Keep this list alphabetically ordered to avoid merge conflicts
 
 <!--packages-start-->
+
+- xo-web minor
 
 <!--packages-end-->
