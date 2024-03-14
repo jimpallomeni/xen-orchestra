@@ -1273,7 +1273,7 @@ export const pcisHide = async (pcis, hide) => {
   try {
     await confirm({
       body: _('applyChangeOnPcis', { nPcis: pcis.length }),
-      title: _(hide ? 'pcisEnable' : 'pcisDisable', { nPcis: pcis.length })
+      title: _(hide ? 'pcisEnable' : 'pcisDisable', { nPcis: pcis.length }),
     })
   } catch (error) {
     return
@@ -1281,7 +1281,12 @@ export const pcisHide = async (pcis, hide) => {
   return _call('pci.hide', { pcis: resolveIds(pcis), hide })
 }
 
-export const isPciHidden = (pci) => _call('pci.isHidden', { id: resolveId(pci) })
+export const isPciHidden = pci => _call('pci.isHidden', { id: resolveId(pci) })
+
+//  ATM, unknown date for the availablity on XS, since they are doing rolling release
+// FIXME: When XS release methods to do PCI passthrough, update this check
+export const isPciPassthroughAvailable = host =>
+  host.productBrand === 'XCP-ng' && semver.satisfies(host.version, '>=8.3.0')
 
 // Containers --------------------------------------------------------
 
