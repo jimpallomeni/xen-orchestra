@@ -204,8 +204,18 @@ export default class {
       }
     }
 
-    const tokens = this._tokens
     const now = Date.now()
+    const expiration = now + duration
+
+    const connection = this._app.apiContext?.connection
+    if (connection !== undefined) {
+      const connectionExpiration = connection.get('expiration')
+      if (expiration > connectionExpiration) {
+        throw new Error('expiration cannot be after expiration of current session')
+      }
+    }
+
+    const tokens = this._tokens
 
     const clientId = client?.id
     if (clientId !== undefined) {
@@ -213,7 +223,7 @@ export default class {
       if (token !== undefined) {
         if (token.expiration > now) {
           token.description = description
-          token.expiration = now + duration
+          token.expiration = expiration
           tokens.update(token)::ignoreErrors()
 
           return token
@@ -229,7 +239,7 @@ export default class {
       description,
       id: await generateToken(),
       user_id: userId,
-      expiration: now + duration,
+      expiration,
     }
 
     await this._tokens.add(token)
