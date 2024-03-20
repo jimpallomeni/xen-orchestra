@@ -136,6 +136,8 @@ export class Xapi extends EventEmitter {
 
     const { httpProxy } = opts
     const dispatcherOpts = {
+      bodyTimeout: this._httpInactivityTimeout,
+      headersTimeout: this._httpInactivityTimeout,
       maxRedirections: 3,
     }
     const tlsOpts = {
@@ -423,9 +425,7 @@ export class Xapi extends EventEmitter {
       pRetry(
         async () => {
           return request(url, {
-            bodyTimeout: this._httpInactivityTimeout,
             dispatcher: this._undiciDispatcher,
-            headersTimeout: this._httpInactivityTimeout,
             maxRedirections: 0,
             method: 'GET',
             path: pathname,
@@ -507,19 +507,14 @@ export class Xapi extends EventEmitter {
     url.search = new URLSearchParams(query)
     await this._setHostAddressInUrl(url, host)
 
+    const dispatcher = this._undiciDispatcher
     const doRequest = (url, opts) =>
-      httpRequest(url, {
+      request(url, {
         body,
+        dispatcher,
         headers,
         method: 'PUT',
-        rejectUnauthorized: !this._allowUnauthorized,
         signal: $cancelToken,
-
-        // this is an inactivity timeout (unclear in Node doc)
-        timeout: this._httpInactivityTimeout,
-
-        // Support XS <= 6.5 with Node => 12
-        minVersion: 'TLSv1',
 
         ...opts,
       })
@@ -534,16 +529,18 @@ export class Xapi extends EventEmitter {
         ? doRequest(dummyUrl, {
             body: '',
 
-            maxRedirects: 0,
+            maxRedirections: 0,
           }).then(
             response => {
-              response.destroy()
+              response.body.on('error', noop)
+              response.body.destroy()
               return doRequest(url)
             },
             async error => {
               let response
               if (error != null && (response = error.response) != null) {
-                response.destroy()
+                response.body.on('error', noop)
+                response.body.destroy()
 
                 const {
                   headers: { location },
