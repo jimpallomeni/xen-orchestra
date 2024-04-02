@@ -637,23 +637,18 @@ export default class TabAdvanced extends Component {
   _attachPcis = async () => {
     const { vm } = this.props
     const pcis = await confirm({
-      body: <PciAttachModal attachedPciIds={this._getAttachedPciIds()} pcisByHost={this.props.pcisByHost} vm={vm} />,
+      body: <PciAttachModal attachedPciIds={vm.attachedPcis} pcisByHost={this.props.pcisByHost} vm={vm} />,
       icon: 'add',
       title: _('attachPcis'),
     })
     await vmAttachPcis(vm, pcis)
   }
 
-  _getAttachedPciIds = createSelector(
-    () => this.props.vm,
-    vm => vm.other.pci?.split(',')?.map(s => s.split('/')[1]) ?? [] // other.pci: 0/pci_id,0/pci_id,..
-  )
-
   _getPcis = createSelector(
     () => this.props.vm,
     () => this.props.pcisByHost,
     (vm, pcisByHost) => {
-      if (!isVmRunning(vm)) {
+      if (!isVmRunning(vm) && vm.power_state !== 'Paused') {
         // If the VM is not running, it's not attached to any host, therefore,
         // we cannot determine which XAPI PCI object is associated with the given PCI_ID (eg: 0000:01:00.4).
         // This determination depends on the specific host environment.
@@ -663,16 +658,15 @@ export default class TabAdvanced extends Component {
     }
   )
 
-  _getIsPciPassthroughAvailable = () => {
-    const { pool, vm, vmHosts } = this.props
-
-    const host = vmHosts[pool?.master ?? vm.$container]
+  _getPciAttachButtonTooltip = () => {
+    const { vm, vmHosts } = this.props
+    const host = vmHosts[vm.$container]
     if (host === undefined) {
-      // Let's consider it `available` to avoid blocking a user who only has ACL on the VM
-      return true
+      // Host ACL is required
+      return _('notEnoughPermissionsError')
     }
 
-    return isPciPassthroughAvailable(host)
+    return isPciPassthroughAvailable(host) ? undefined : _('onlyAvailableXcp83OrHigher')
   }
 
   render() {
@@ -683,7 +677,7 @@ export default class TabAdvanced extends Component {
     const isAddVtpmAvailable = addVtpmTooltip === undefined
     const isDeleteVtpmAvailable = deleteVtpmTooltip === undefined
     const vtpmId = vm.VTPMs[0]
-    const _isPciPassthroughAvailable = this._getIsPciPassthroughAvailable()
+    const pciAttachButtonTooltip = this._getPciAttachButtonTooltip()
     return (
       <Container>
         <Row>
@@ -1232,16 +1226,16 @@ export default class TabAdvanced extends Component {
             </div>
             <ActionButton
               btnStyle='primary'
-              disabled={!_isPciPassthroughAvailable}
+              disabled={pciAttachButtonTooltip !== undefined}
               handler={this._attachPcis}
               icon='connect'
-              tooltip={_isPciPassthroughAvailable ? undefined : _('onlyAvailableXcp83OrHighter')}
+              tooltip={pciAttachButtonTooltip}
             >
               {_('attachPcis')}
             </ActionButton>
             <SortedTable
               actions={PCI_ACTIONS}
-              collection={this._getAttachedPciIds()}
+              collection={vm.attachedPcis}
               columns={PCI_COLUMNS}
               data-pciByPciId={this._getPcis()}
               data-vm={vm}

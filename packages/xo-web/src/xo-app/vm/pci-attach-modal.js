@@ -56,7 +56,7 @@ export default class PciAttachModal extends Component {
     () => this.state.hiddenPcis,
     () => this.props.attachedPciIds,
     (pcis, attachedPciIds) =>
-      pcis?.filter(pci => !attachedPciIds.includes(pci.pci_id)).map(pci => ({ value: pci.id, ...pci })) // value property is needed for multi select
+      pcis?.filter(pci => !attachedPciIds?.includes(pci.pci_id)).map(pci => ({ value: pci.id, ...pci })) // value property is needed for multi select
   )
 
   render() {

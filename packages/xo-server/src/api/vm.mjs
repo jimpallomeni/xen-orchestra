@@ -1644,17 +1644,14 @@ createInterface.resolve = {
 // -------------------------------------------------------------------
 
 // https://docs.xcp-ng.org/compute/#5-put-this-pci-device-into-your-vm
-const getRawPciIds = pciIds => '0/'.concat(pciIds.join(',0/'))
-const getAttachedPciIds = vm => vm.other.pci?.split(',').map(s => s.split('/')[1]) ?? []
+const formatPciIds = pciIds => '0/' + pciIds.join(',0/')
 export async function attachPcis({ vm, pcis }) {
   await this.checkPermissions(pcis.map(id => [id, 'administrate']))
 
   const pciIds = pcis.map(id => this.getObject(id, 'PCI').pci_id)
-  const attachedPciIds = getAttachedPciIds(vm)
+  const uniquePciIds = Array.from(new Set((vm.attachedPcis ?? []).concat(pciIds)))
 
-  const uniquePciIds = Array.from(new Set(attachedPciIds.concat(pciIds)))
-
-  await this.getXapiObject(vm).update_other_config('pci', getRawPciIds(uniquePciIds))
+  await this.getXapiObject(vm).update_other_config('pci', formatPciIds(uniquePciIds))
 }
 
 attachPcis.params = {
@@ -1673,11 +1670,10 @@ attachPcis.resolve = {
 // -------------------------------------------------------------------
 
 export async function detachPcis({ vm, pciIds }) {
-  const attachedPciIds = getAttachedPciIds(vm)
-  const newAttachedPciIds = attachedPciIds.filter(id => !pciIds.includes(id))
+  const newAttachedPciIds = vm.attachedPcis.filter(id => !pciIds.includes(id))
   await this.getXapiObject(vm).update_other_config(
     'pci',
-    newAttachedPciIds.length === 0 ? null : getRawPciIds(newAttachedPciIds)
+    newAttachedPciIds.length === 0 ? null : formatPciIds(newAttachedPciIds)
   )
 }
 
