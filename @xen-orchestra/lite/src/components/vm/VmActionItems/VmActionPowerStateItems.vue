@@ -16,12 +16,6 @@
       </MenuItem>
     </template>
   </MenuItem>
-  <MenuItem :busy="areVmsBusyToPause" :disabled="!areVmsRunning" :icon="faPause" @click="xenApi.vm.pause(vmRefs)">
-    {{ $t('pause') }}
-  </MenuItem>
-  <MenuItem :busy="areVmsBusyToSuspend" :disabled="!areVmsRunning" :icon="faMoon" @click="xenApi.vm.suspend(vmRefs)">
-    {{ $t('suspend') }}
-  </MenuItem>
   <MenuItem
     :busy="areVmsBusyToResume"
     :disabled="!areVmsSuspended && !areVmsPaused"
@@ -30,10 +24,16 @@
   >
     {{ $t('resume') }}
   </MenuItem>
+  <MenuItem :busy="areVmsBusyToPause" :disabled="!areVmsRunning" :icon="faPause" @click="xenApi.vm.pause(vmRefs)">
+    {{ $t('pause') }}
+  </MenuItem>
+  <MenuItem :busy="areVmsBusyToSuspend" :disabled="!areVmsRunning" :icon="faMoon" @click="xenApi.vm.suspend(vmRefs)">
+    {{ $t('suspend') }}
+  </MenuItem>
   <MenuItem
     :busy="areVmsBusyToReboot"
     :disabled="!areVmsRunning"
-    :icon="faRotateLeft"
+    :icon="faRotateRight"
     @click="xenApi.vm.reboot(vmRefs)"
   >
     {{ $t('reboot') }}
@@ -41,23 +41,18 @@
   <MenuItem
     :busy="areVmsBusyToForceReboot"
     :disabled="!areVmsRunning && !areVmsPaused"
-    :icon="faRepeat"
+    :icon="faBoltLightning"
     @click="xenApi.vm.reboot(vmRefs, true)"
   >
     {{ $t('force-reboot') }}
   </MenuItem>
-  <MenuItem
-    :busy="areVmsBusyToShutdown"
-    :disabled="!areVmsRunning"
-    :icon="faPowerOff"
-    @click="xenApi.vm.shutdown(vmRefs)"
-  >
+  <MenuItem :busy="areVmsBusyToShutdown" :disabled="!areVmsRunning" :icon="faStop" @click="xenApi.vm.shutdown(vmRefs)">
     {{ $t('shutdown') }}
   </MenuItem>
   <MenuItem
     :busy="areVmsBusyToForceShutdown"
     :disabled="!areVmsRunning && !areVmsSuspended && !areVmsPaused"
-    :icon="faPlug"
+    :icon="faBoltLightning"
     @click="xenApi.vm.shutdown(vmRefs, true)"
   >
     {{ $t('force-shutdown') }}
@@ -76,16 +71,15 @@ import { usePoolCollection } from '@/stores/xen-api/pool.store'
 import { useVmCollection } from '@/stores/xen-api/vm.store'
 import MenuItem from '@core/components/menu/MenuItem.vue'
 import {
+  faBoltLightning,
   faCirclePlay,
   faMoon,
   faPause,
   faPlay,
-  faPlug,
-  faPowerOff,
-  faRepeat,
-  faRotateLeft,
+  faRotateRight,
   faServer,
   faStar,
+  faStop,
 } from '@fortawesome/free-solid-svg-icons'
 import { computed } from 'vue'
 

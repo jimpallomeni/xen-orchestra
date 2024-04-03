@@ -1,23 +1,54 @@
 <template>
-  <li v-if="vm !== undefined" ref="rootElement" class="infra-vm-item">
-    <InfraItemLabel v-if="isVisible" :icon="faDisplay" :route="{ name: 'vm.console', params: { uuid: vm.uuid } }">
+  <TreeItem v-if="vm !== undefined" ref="rootElement" class="infra-vm-item">
+    <TreeItemLabel
+      v-if="isVisible"
+      :icon="faDisplay"
+      :route="{ name: 'vm.console', params: { uuid: vm.uuid } }"
+      no-indent
+    >
       {{ vm.name_label || '(VM)' }}
-      <template #actions>
-        <InfraAction>
-          <PowerStateIcon :state="vm.power_state" />
-        </InfraAction>
+      <template #icon>
+        <VmIcon :state="vmPowerState!" />
       </template>
-    </InfraItemLabel>
-  </li>
+      <template #addons>
+        <MenuList placement="bottom-start" shadow>
+          <template #trigger="{ open, isOpen }">
+            <ButtonIcon
+              v-tooltip="{ content: $t('core.quick-actions'), placement: 'right' }"
+              :class="{ active: isOpen }"
+              :icon="faEllipsis"
+              @click="open"
+            />
+          </template>
+          <MenuItem :icon="faPowerOff">
+            {{ $t('core.change-state') }}
+            <template #submenu>
+              <VmActionPowerStateItems :vm-refs="[vm.$ref]" />
+            </template>
+          </MenuItem>
+          <VmActionMigrateItem :selected-refs="[vm.$ref]" is-single-action />
+          <VmActionSnapshotItem :vm-refs="[vm.$ref]" />
+        </MenuList>
+      </template>
+    </TreeItemLabel>
+  </TreeItem>
 </template>
 
 <script lang="ts" setup>
-import InfraAction from '@/components/infra/InfraAction.vue'
-import InfraItemLabel from '@/components/infra/InfraItemLabel.vue'
-import PowerStateIcon from '@/components/PowerStateIcon.vue'
-import { useVmCollection } from '@/stores/xen-api/vm.store'
+import VmActionMigrateItem from '@/components/vm/VmActionItems/VmActionMigrateItem.vue'
+import VmActionPowerStateItems from '@/components/vm/VmActionItems/VmActionPowerStateItems.vue'
+import VmActionSnapshotItem from '@/components/vm/VmActionItems/VmActionSnapshotItem.vue'
+import type { VM_POWER_STATE } from '@/libs/xen-api/xen-api.enums'
 import type { XenApiVm } from '@/libs/xen-api/xen-api.types'
-import { faDisplay } from '@fortawesome/free-solid-svg-icons'
+import { useVmCollection } from '@/stores/xen-api/vm.store'
+import ButtonIcon from '@core/components/button/ButtonIcon.vue'
+import VmIcon from '@core/components/icon/VmIcon.vue'
+import MenuItem from '@core/components/menu/MenuItem.vue'
+import MenuList from '@core/components/menu/MenuList.vue'
+import TreeItem from '@core/components/tree/TreeItem.vue'
+import TreeItemLabel from '@core/components/tree/TreeItemLabel.vue'
+import { vTooltip } from '@core/directives/tooltip.directive'
+import { faDisplay, faEllipsis, faPowerOff } from '@fortawesome/free-solid-svg-icons'
 import { useIntersectionObserver } from '@vueuse/core'
 import { computed, ref } from 'vue'
 
@@ -36,22 +67,6 @@ const { stop } = useIntersectionObserver(rootElement, ([entry]) => {
     stop()
   }
 })
+
+const vmPowerState = computed(() => vm.value?.power_state.toLowerCase() as Lowercase<VM_POWER_STATE> | undefined)
 </script>
-
-<style lang="postcss" scoped>
-.infra-action {
-  color: var(--color-purple-d60);
-
-  &.running {
-    color: var(--color-green-base);
-  }
-
-  &.paused {
-    color: var(--color-grey-300);
-  }
-
-  &.suspended {
-    color: var(--color-purple-d20);
-  }
-}
-</style>
