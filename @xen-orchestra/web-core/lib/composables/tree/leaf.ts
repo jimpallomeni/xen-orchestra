@@ -8,16 +8,16 @@ export class Leaf<TData extends object = any, const TDiscriminator = any> extend
     return this.passesFilter ?? false
   }
 
-  get isVisible() {
-    if (this.passesFilterUpwards) {
-      return true
-    }
+  get failsFilterDownwards(): boolean {
+    return this.passesFilter === false
+  }
 
-    if (this.passesFilter === false) {
+  get isExcluded() {
+    if (this.passesFilterUpwards) {
       return false
     }
 
-    return this.parent?.isExpanded ?? true
+    return this.passesFilter === false
   }
 
   get statuses(): LeafStatuses {

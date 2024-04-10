@@ -4,7 +4,7 @@ import type { Identifiable, Labeled, TreeContext, TreeNodeOptions } from '@core/
 export abstract class TreeNodeBase<TData extends object = any, TDiscriminator = any> {
   abstract readonly isBranch: boolean
   abstract passesFilterDownwards: boolean
-  abstract isVisible: boolean
+  abstract isExcluded: boolean
   abstract statuses: Record<string, boolean>
 
   readonly data: TData

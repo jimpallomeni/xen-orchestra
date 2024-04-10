@@ -50,7 +50,7 @@ export function useTree<
     return nodeMap
   })
 
-  const visibleNodes = computed(() => nodes.value.filter(node => node.isVisible))
+  const visibleNodes = computed(() => nodes.value.filter(node => !node.isExcluded))
 
   const getNode = (id: TreeNodeId | undefined) => (id !== undefined ? nodesMap.value.get(id) : undefined)
   const getNodes = (ids: TreeNodeId[]) => ids.map(getNode).filter(node => node !== undefined) as TreeNode[]
