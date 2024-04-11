@@ -106,10 +106,13 @@ export class RemoteAdapter {
   async *_getLvmLogicalVolumes(devicePath, pvId, vgName) {
     yield this._getLvmPhysicalVolume(devicePath, pvId && (await this._findPartition(devicePath, pvId)))
 
+    debug('activate LVM volume group', { vgName })
     await fromCallback(execFile, 'vgchange', ['-ay', vgName])
     try {
+      debug('get LVM volume group name and path', { vgName })
       yield lvs(['lv_name', 'lv_path'], vgName)
     } finally {
+      debug('deactivate LVM volume group', { vgName })
       await fromCallback(execFile, 'vgchange', ['-an', vgName])
     }
   }
@@ -120,15 +123,22 @@ export class RemoteAdapter {
       args.push('-o', partition.start * 512, '--sizelimit', partition.size)
     }
     args.push('--show', '-f', devicePath)
+
+    debug('attach loop device', { devicePath, partition })
     const path = (await fromCallback(execFile, 'losetup', args)).trim()
     try {
+      debug('list LVM physical volume', { path })
       await fromCallback(execFile, 'pvscan', ['--cache', path])
+
       yield path
     } finally {
       try {
         const vgNames = await pvs('vg_name', path)
+
+        debug('deactivate LVM volume groups', { vgNames })
         await fromCallback(execFile, 'vgchange', ['-an', ...vgNames])
       } finally {
+        debug('detach loop device', { path })
         await fromCallback(execFile, 'losetup', ['-d', path])
       }
     }
@@ -149,6 +159,7 @@ export class RemoteAdapter {
 
     const path = yield getTmpDir()
     const mount = options => {
+      debug('mount device', { devicePath, mountPath: path })
       return fromCallback(execFile, 'mount', [
         `--options=${options.join(',')}`,
         `--source=${devicePath}`,
@@ -166,6 +177,7 @@ export class RemoteAdapter {
     try {
       yield path
     } finally {
+      debug('umount device', { devicePath, mountPath: path })
       await fromCallback(execFile, 'umount', ['--lazy', path])
     }
   }
@@ -335,6 +347,8 @@ export class RemoteAdapter {
 
     const diskPath = handler.getFilePath('/' + diskId)
     const mountDir = yield getTmpDir()
+
+    debug('mount VHD (vhdimount)', { diskPath, mountPath: mountDir })
     await fromCallback(execFile, 'vhdimount', [diskPath, mountDir])
     try {
       let max = 0
@@ -356,6 +370,7 @@ export class RemoteAdapter {
 
       yield `${mountDir}/${maxEntry}`
     } finally {
+      debug('umount VHD (fusermount)', { diskPath, mountPath: mountDir })
       await fromCallback(execFile, 'fusermount', ['-uz', mountDir])
     }
   }
