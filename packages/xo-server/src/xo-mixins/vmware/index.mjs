@@ -28,7 +28,7 @@ export default class MigrateVm {
 
   async #createVmAndNetworks({ metadata, networkId, xapi }) {
     const { firmware, memory, name_label, networks, nCpus } = metadata
-    return await Task.run({ properties: { name: 'creating MV on XCP side' } }, async () => {
+    return await Task.run({ properties: { name: 'creating VM on XCP side' } }, async () => {
       // got data, ready to start creating
       const vm = await xapi._getOrWaitObject(
         await xapi.VM_create({
@@ -85,14 +85,17 @@ export default class MigrateVm {
       }
     )
 
-    const coldChainsByNodes = chainsByNodes.map(_ => [..._]) // contains a copy
-    const runningChainByNodes = []
-    if (isRunning) {
-      coldChainsByNodes.forEach((coldChainByNodes, index) => {
-        const running = coldChainByNodes.pop() // cold chain doew not contain the running one anymore
+    const coldChainsByNodes = {}
+    const runningChainByNodes ={}
+    Object.entries(chainsByNodes).forEach(([key, chain])=>{
+      const chainCopy = [...chain]
+      if (isRunning) {
+        const running = chainCopy.pop() // cold chain does not contain the running one anymore
         runningChainByNodes[index] = [running]
-      })
-    }
+      }  
+      coldChainsByNodes[key] = chainCopy
+    }) 
+    
 
     const vhds = await importDisksFromDatastore({
       esxi,
