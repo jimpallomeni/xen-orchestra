@@ -28,9 +28,6 @@ async function _importDiskChain(
       if (parentVhd === undefined) {
         throw new Error(`Can't import delta of a running VM without its parent VHD`)
       }
-      if (vdi === undefined) {
-        throw new Error(`Can't import delta of a running VM without its VDI`)
-      }
       vhd = await openDeltaVmdkasVhd(datastoreName, path + '/' + fileName, parentVhd, {
         lookMissingBlockInParent: isFullImport, // only look to missing block on full import
         esxi,
