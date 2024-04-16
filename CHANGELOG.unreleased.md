@@ -12,6 +12,7 @@
 > Users must be able to say: “I had this issue, happy to know it's fixed”
 
 - [Import/VMWare] Fix `Cannot read properties of undefined (reading 'match')`
+- [Import/VMWare] Fix ERR_PREMATURE_CLOSE error with Xenserver hosts (PR [#7563](https://github.com/vatesfr/xen-orchestra/pull/7563))
 
 ### Packages to release
 
@@ -32,6 +33,7 @@
 - @vates/task minor
 - @xen-orchestra/proxy minor
 - @xen-orchestra/vmware-explorer patch
+- @xen-orchestra/xva patch
 - xo-server patch
 
 <!--packages-end-->
