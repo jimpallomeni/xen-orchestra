@@ -91,7 +91,7 @@ export default class MigrateVm {
       const chainCopy = [...chain]
       if (isRunning) {
         const running = chainCopy.pop() // cold chain does not contain the running one anymore
-        runningChainByNodes[index] = [running]
+        runningChainByNodes[key] = [running]
       }  
       coldChainsByNodes[key] = chainCopy
     }) 
