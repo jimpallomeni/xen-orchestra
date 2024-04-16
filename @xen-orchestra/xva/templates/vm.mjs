@@ -36,6 +36,7 @@ export const DEFAULT_VM = {
     is_snapshot_from_vmpp: false,
     is_vmss_snapshot: false,
     last_booted_record: '',
+    last_boot_CPU_flags: {},
     memory_dynamic_max: 1,
     memory_dynamic_min: 1,
     memory_overhead: 11534336,
