@@ -27,7 +27,33 @@ export default class MigrateVm {
   }
 
   async #createVmAndNetworks({ metadata, networkId, xapi }) {
-    const { firmware, memory, name_label, networks, nCpus } = metadata
+    const { guestId, firmware, memory, name_label, networks, nCpus } = metadata
+
+    const templateLabels = (await xapi.getAllRecords('VM'))
+      .filter(({ is_a_template }) => is_a_template)
+      .map(({ name_label }) => name_label.toLocaleLowerCase())
+      .filter(label => !label.includes('deprecated'))
+    // from https://vdc-download.vmware.com/vmwb-repository/dcr-public/184bb3ba-6fa8-4574-a767-d0c96e2a38f4/ba9422ef-405c-47dd-8553-e11b619185b2/SDK/vsphere-ws/docs/ReferenceGuide/vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
+    const matches = guestId.toLocaleLowerCase().match(/([a-z]+)([0-9]*)_?(64)?guest/)
+    const family = matches[1]
+    let version, sixtyfour
+    if (matches[2] === '64') {
+      version = ''
+      sixtyfour = '64'
+    } else {
+      version = matches[2]
+      sixtyfour = matches[3]
+    }
+    const withFamily = templateLabels.filter(label => label.includes(family))
+    const withVersion = version === '' ? withFamily : withFamily.filter(label => label.includes(version))
+    const with64bits = sixtyfour === '64' ? withVersion.filter(label => label.includes('(64-bit)')) : withVersion
+
+    const base_template_name = with64bits.pop() ?? withVersion.pop() ?? withFamily.pop() ?? 'Other install media'
+
+    const other_config = {
+      base_template_name,
+    }
+
     return await Task.run({ properties: { name: 'creating VM on XCP side' } }, async () => {
       // got data, ready to start creating
       const vm = await xapi._getOrWaitObject(
@@ -37,8 +63,9 @@ export default class MigrateVm {
           memory_dynamic_min: memory,
           memory_static_max: memory,
           memory_static_min: memory,
-          name_description: 'from esxi',
+          name_description: `from esxi -- source guest id :${guestId} -- template used:${base_template_name}`,
           name_label,
+          other_config,
           VCPUs_at_startup: nCpus,
           VCPUs_max: nCpus,
         })
@@ -86,16 +113,15 @@ export default class MigrateVm {
     )
 
     const coldChainsByNodes = {}
-    const runningChainByNodes ={}
-    Object.entries(chainsByNodes).forEach(([key, chain])=>{
+    const runningChainByNodes = {}
+    Object.entries(chainsByNodes).forEach(([key, chain]) => {
       const chainCopy = [...chain]
       if (isRunning) {
         const running = chainCopy.pop() // cold chain does not contain the running one anymore
         runningChainByNodes[key] = [running]
-      }  
+      }
       coldChainsByNodes[key] = chainCopy
-    }) 
-    
+    })
 
     const vhds = await importDisksFromDatastore({
       esxi,
