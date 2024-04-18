@@ -9,12 +9,13 @@ import SortedTable from 'sorted-table'
 import { confirm } from 'modal'
 import { connectStore } from 'utils'
 import { createGetObjectsOfType, createSelector } from 'selectors'
-import { filter, groupBy, keyBy } from 'lodash'
+import { filter, groupBy, keyBy, map } from 'lodash'
 import { injectState, provideState } from 'reaclette'
 import { Pool, Sr, Host } from 'render-xo-item'
 
 import BindXostorLicensesModal from './bind-xostor-licenses-modal'
 import Tooltip from 'tooltip'
+import { bindLicense, rebindObjectLicense } from 'xo'
 
 class XostorLicensesForm extends Component {
   getAlerts = createSelector(
@@ -30,23 +31,12 @@ class XostorLicensesForm extends Component {
         const xostorLicenses = licensesByHostUuid[host.id]
         const xcpngLicense = xcpngLicensebyHostUuid[host.id]
 
-        if (xcpngLicense === undefined) {
+        if (xcpngLicense === undefined || xcpngLicense.expires < now) {
           alerts.push({
             level: 'danger',
             render: (
               <p>
-                No XCP-ng Pro support on <Host id={host.id} />
-              </p>
-            ),
-          })
-        }
-
-        if (xcpngLicense?.expires < now) {
-          alerts.push({
-            level: 'danger',
-            render: (
-              <p>
-                The XCP-ng Pro support license {xcpngLicense.id.slice(-4)} is expired on <Host id={host.id} />
+                {_('hostNoSupport')} <Host id={host.id} />
               </p>
             ),
           })
@@ -55,11 +45,7 @@ class XostorLicensesForm extends Component {
         if (xostorLicenses === undefined) {
           alerts.push({
             level: 'danger',
-            render: (
-              <p>
-                No XOSTOR license on <Host id={host.id} />
-              </p>
-            ),
+            render: _('hostHasNoXostorLicense', { host: <Host id={host.id} /> }),
           })
         }
 
@@ -68,18 +54,22 @@ class XostorLicensesForm extends Component {
             level: 'danger',
             render: (
               <p>
-                Multiple XOSTOR licenses are bound to <Host id={host.id} />
+                {_('hostBoundToMultipleXostorLicenses', { host: <Host id={host.id} /> })}
                 <br />
-                {licenses.map(license => license.id.slice(-4)).join(',')}
+                {xostorLicenses.map(license => license.id.slice(-4)).join(',')}
               </p>
             ),
           })
         }
-        const xostorLicense = xostorLicenses?.[0]
-        if (xostorLicense?.expires < now) {
+        const expiredXostorLicenses = xostorLicenses?.filter(license => license.expires < now)
+        if (expiredXostorLicenses?.length > 0) {
           alerts.push({
             level: 'danger',
-            render: _('licenseExpiredXostorWarning', { licenseId: license?.id.slice(-4) }), // Display the xostor host?
+            render: _('licenseExpiredXostorWarning', {
+              licenseIds: expiredXostorLicenses.map(license => license.id.slice(-4)).join(','),
+              nLicenseIds: expiredXostorLicenses.length,
+              host: <Host id={host.id} />,
+            }),
           })
         }
       })
@@ -88,14 +78,35 @@ class XostorLicensesForm extends Component {
     }
   )
 
-  async bindXostorLicenses() {
-    // const hosts = //
-    const params = await confirm({
+  bindXostorLicenses = async () => {
+    const sr = this.props.item
+    const hosts = groupBy(this.props.userData.hosts, '$pool')[sr.$pool]
+    const xostorLicensesByHost = this.props.userData.licensesByHostUuid
+
+    const licenseByHost = await confirm({
       icon: 'connect',
-      title: 'Bind licenses',
-      body: <BindXostorLicensesModal hosts={{}} />,
+      title: _('bindLicenses'),
+      body: <BindXostorLicensesModal hosts={hosts} />,
     })
-    console.log({ params })
+
+    await Promise.all(
+      map(licenseByHost, (licenseId, hostId) => {
+        if (licenseId === 'none') {
+          return
+        }
+
+        const prevLicenses = xostorLicensesByHost[hostId]
+        if (prevLicenses !== undefined) {
+          if (prevLicenses.some(license => license.id === licenseId)) {
+            // License already bound to the host
+            return
+          }
+          return rebindObjectLicense(hostId, licenseId, 'xostor')
+        }
+        return bindLicense(licenseId, hostId)
+      })
+    )
+    await this.props.userData.updateLicenses()
   }
 
   render() {
@@ -104,14 +115,14 @@ class XostorLicensesForm extends Component {
     return (
       <div>
         {alerts.length === 0 ? (
-          <Tooltip content='SR under support'>
+          <Tooltip content={_('xostorHasSupport')}>
             <Icon icon='menu-support' className='text-success' />
           </Tooltip>
         ) : (
           <BulkIcons alerts={alerts} />
         )}
         <ActionButton btnStyle='primary' className='ml-1' handler={this.bindXostorLicenses} icon='connect'>
-          Bind licenses
+          {_('bindLicenses')}
         </ActionButton>
       </div>
     )
@@ -143,10 +154,7 @@ const Xostor = decorate([
   })),
   provideState({
     computed: {
-      licensesByHostUuid: (state, { xostorLicenses }) => {
-        console.log(xostorLicenses)
-        return groupBy(xostorLicenses, 'boundObjectId')
-      },
+      licensesByHostUuid: (state, { xostorLicenses }) => groupBy(xostorLicenses, 'boundObjectId'),
       xcpngLicenseByHostUuid: (state, { xcpngLicenses }) => keyBy(xcpngLicenses, 'boundObjectId'),
     },
   }),
