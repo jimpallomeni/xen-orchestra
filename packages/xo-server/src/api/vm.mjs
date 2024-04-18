@@ -1392,8 +1392,28 @@ import_.resolve = {
 
 export { import_ as import }
 
-export async function importFromEsxi({ host, network, password, sr, sslVerify = true, stopSource = false, user, vm }) {
-  return importMultipleFromEsxi.call(this, { host, network, password, sr, sslVerify, stopSource, user, vms: [vm] })
+export async function importFromEsxi({
+  host,
+  network,
+  password,
+  sr,
+  sslVerify = true,
+  stopSource = false,
+  user,
+  vm,
+  workDirRemote,
+}) {
+  return importMultipleFromEsxi.call(this, {
+    host,
+    network,
+    password,
+    sr,
+    sslVerify,
+    stopSource,
+    user,
+    vms: [vm],
+    workDirRemote,
+  })
 }
 
 importFromEsxi.params = {
@@ -1405,6 +1425,7 @@ importFromEsxi.params = {
   stopSource: { type: 'boolean', optional: true },
   user: { type: 'string' },
   vm: { type: 'string' },
+  workDirRemote: { type: 'string' },
 }
 
 /**
@@ -1424,19 +1445,22 @@ export async function importMultipleFromEsxi({
   thin,
   user,
   vms,
+  workDirRemote,
 }) {
   const task = await this.tasks.create({ name: `importing vms ${vms.join(',')}` })
   let done = 0
   return task.run(async () => {
     const PREFIX = '[vmware]'
 
+    workDirRemote = workDirRemote ? await this.getRemote(workDirRemote) : undefined
     return Disposable.use(
+      getSyncedHandler(await this.getRemote(workDirRemote)),
       Disposable.all(
         (await this.getAllRemotes())
           .filter(({ name }) => name.toLocaleLowerCase().startsWith(PREFIX))
           .map(remote => getSyncedHandler(remote))
       ),
-      async handlers => {
+      async (workDirRemote, handlers) => {
         const dataStoreToHandlers = {}
         handlers.forEach(handler => {
           const name = handler._remote.name
@@ -1465,6 +1489,7 @@ export async function importMultipleFromEsxi({
                     network,
                     stopSource,
                     dataStoreToHandlers,
+                    workDirRemote,
                   })
                   result[vm] = vmUuid
                 } finally {
@@ -1525,6 +1550,7 @@ importMultipleFromEsxi.params = {
     type: 'array',
     uniqueItems: true,
   },
+  workDirRemote: { type: 'string', optional: true },
 }
 
 // -------------------------------------------------------------------
