@@ -68,23 +68,11 @@ export default class Esxi extends EventEmitter {
     })
   }
 
-  async #download(dataStore, path, range) {
-    strictEqual(this.#ready, true)
-    notStrictEqual(this.#dcPath, undefined)
-    const url = new URL('https://localhost')
-    url.host = this.#host
-    url.pathname = '/folder/' + path
-    url.searchParams.set('dcPath', this.#dcPath)
-    url.searchParams.set('dsName', dataStore)
-    const headers = {}
+  async #fetch(url, headers = {}) {
     if (this.#cookies) {
       headers.cookie = this.#cookies
     } else {
       headers.Authorization = 'Basic ' + Buffer.from(this.#user + ':' + this.#password).toString('base64')
-    }
-    if (range) {
-      headers['content-type'] = 'multipart/byteranges'
-      headers.Range = 'bytes=' + range
     }
     const res = await fetch(url, {
       agent: this.#httpsAgent,
@@ -104,6 +92,22 @@ export default class Esxi extends EventEmitter {
         .join('; ')
     }
     return res
+  }
+
+  async #download(dataStore, path, range) {
+    strictEqual(this.#ready, true)
+    notStrictEqual(this.#dcPath, undefined)
+    const url = new URL('https://localhost')
+    url.host = this.#host
+    url.pathname = '/folder/' + path
+    url.searchParams.set('dcPath', this.#dcPath)
+    url.searchParams.set('dsName', dataStore)
+    const headers = {}
+    if (range) {
+      headers['content-type'] = 'multipart/byteranges'
+      headers.Range = 'bytes=' + range
+    }
+    return this.#fetch(url, headers)
   }
 
   async download(dataStore, path, range) {
