@@ -118,7 +118,7 @@ const LicenseManager = ({ item, userData }) => {
     return <ProxyLicense license={item} />
   }
 
-  if (type === 'xcpng') {
+  if (type === 'xcpng' || type === 'xostor') {
     if (item.hostId !== undefined) {
       return (
         <span>
@@ -126,22 +126,6 @@ const LicenseManager = ({ item, userData }) => {
         </span>
       )
     }
-  }
-
-  if (type === 'xostor') {
-    const { srId } = item
-
-    if (srId === undefined) {
-      return _('licenseNotBoundXostor')
-    }
-
-    const sr = userData.xostorSrs[srId]
-    return (
-      <span>
-        {sr === undefined ? _('licenseBoundUnknownXostor') : <Link to={`srs/${sr.id}`}>{renderXoItem(sr)}</Link>}{' '}
-        <CopyToClipboardButton value={srId} />
-      </span>
-    )
   }
 
   console.warn('encountered unsupported license type')
@@ -190,15 +174,11 @@ const PRODUCTS_COLUMNS = [
 // -----------------------------------------------------------------------------
 
 @adminOnly
-@connectStore(() => {
-  const getSrs = createGetObjectsOfType('SR')
-  return {
-    xosanSrs: getSrs.filter([
-      ({ SR_type }) => SR_type === 'xosan', // eslint-disable-line camelcase
-    ]),
-    xoaRegistration: state => state.xoaRegisterState,
-    xostorSrs: getSrs.filter([({ SR_type }) => SR_type === 'linstor']),
-  }
+@connectStore({
+  xosanSrs: createGetObjectsOfType('SR').filter([
+    ({ SR_type }) => SR_type === 'xosan', // eslint-disable-line camelcase
+  ]),
+  xoaRegistration: state => state.xoaRegisterState,
 })
 @addSubscriptions(() => ({
   plugins: subscribePlugins,
@@ -334,7 +314,7 @@ export default class Licenses extends Component {
             id: license.id,
             product: 'XOSTOR',
             type: 'xostor',
-            srId: license.boundObjectId,
+            hostId: license.boundObjectId,
           })
         }
       })
@@ -383,7 +363,7 @@ export default class Licenses extends Component {
       return <em>{_('statusLoading')}</em>
     }
 
-    const { xoaRegistration, selfLicenses, xosanSrs, xostorSrs } = this.props
+    const { xoaRegistration, selfLicenses, xosanSrs } = this.props
 
     return (
       <Container>
@@ -410,7 +390,6 @@ export default class Licenses extends Component {
               data-registeredEmail={xoaRegistration.email}
               data-selfLicenses={selfLicenses}
               data-xosanSrs={xosanSrs}
-              data-xostorSrs={xostorSrs}
               stateUrlParam='s'
             />
           </Col>
@@ -418,7 +397,12 @@ export default class Licenses extends Component {
         <Row>
           <Col>
             <h2>{_('xostor')}</h2>
-            <Xostor xostorLicenses={this.state.licenses.xostor} updateLicenses={this._updateLicenses} />
+            {console.log(this.state.licenses.xostor)}
+            <Xostor
+              xostorLicenses={this.state.licenses.xostor}
+              xcpngLicenses={this.state.licenses.xcpng}
+              updateLicenses={this._updateLicenses}
+            />
           </Col>
         </Row>
         <Row>
