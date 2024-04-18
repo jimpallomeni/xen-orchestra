@@ -238,12 +238,29 @@ export default class Esxi extends EventEmitter {
   }
 
   async getAllVmMetadata() {
-    const datas = await this.search('VirtualMachine', ['config', 'storage', 'runtime'])
+    const datas = await this.search('VirtualMachine', ['config', 'storage', 'runtime', 'layoutEx'])
 
     return Object.keys(datas)
       .map(id => {
-        const { config, storage, runtime } = datas[id]
+        const { config, layoutEx, storage, runtime } = datas[id]
         if (storage === undefined) {
+          return undefined
+        }
+        // from https://developer.vmware.com/apis/1720/
+        const diskChains = layoutEx?.disk
+          .map(disk => {
+            if (!disk.chain) {
+              return undefined
+            }
+            return disk.chain.map(({ fileKey: fileKeys }) => {
+              // look for the disk extent data , not the descriptor
+              return layoutEx.file.find(file => {
+                return fileKeys.includes(file.key) && file.type === 'diskExtent'
+              })
+            })
+          })
+          .filter(_ => !!_)
+        if (diskChains.length === 0) {
           return undefined
         }
         const perDatastoreUsage = Array.isArray(storage.perDatastoreUsage)
@@ -251,6 +268,7 @@ export default class Esxi extends EventEmitter {
           : [storage.perDatastoreUsage]
         return {
           id,
+          diskChains,
           nameLabel: config.name,
           memory: +config.hardware.memoryMB * 1024 * 1024,
           nCpus: +config.hardware.numCPU,

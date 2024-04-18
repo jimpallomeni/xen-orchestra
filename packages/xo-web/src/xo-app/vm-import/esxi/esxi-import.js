@@ -12,7 +12,7 @@ import { injectIntl } from 'react-intl'
 import { Input } from 'debounce-input-decorator'
 import { InputCol, LabelCol, Row } from 'form-grid'
 import { Password, Select, Toggle } from 'form'
-import { SelectNetwork, SelectPool, SelectSr } from 'select-objects'
+import { SelectNetwork, SelectRemote, SelectPool, SelectSr } from 'select-objects'
 
 import VmData from './vm-data'
 import { getRedirectionUrl } from '../utils'
@@ -34,6 +34,7 @@ class EsxiImport extends Component {
     stopSource: false,
     stopOnError: true,
     user: '',
+    workDirRemote: undefined,
   }
 
   _getDefaultNetwork = createSelector(
@@ -64,7 +65,19 @@ class EsxiImport extends Component {
   )
 
   _importVms = () => {
-    const { concurrency, hostIp, network, password, skipSslVerify, sr, stopSource, stopOnError, user, vms } = this.state
+    const {
+      concurrency,
+      hostIp,
+      network,
+      password,
+      skipSslVerify,
+      sr,
+      stopSource,
+      stopOnError,
+      user,
+      vms,
+      workDirRemote,
+    } = this.state
     return importVmsFromEsxi({
       concurrency: +concurrency,
       host: hostIp,
@@ -76,6 +89,7 @@ class EsxiImport extends Component {
       stopSource,
       user,
       vms: vms.map(vm => vm.value),
+      workDirRemote: workDirRemote?.id,
     })
   }
 
@@ -131,6 +145,7 @@ class EsxiImport extends Component {
       user,
       vms,
       vmsById,
+      workDirRemote,
     } = this.state
 
     if (!isConnected) {
@@ -186,7 +201,17 @@ class EsxiImport extends Component {
         </form>
       )
     }
-
+    // check if at least one VM has at least one disk chain
+    // with at least one extent stored on vsan
+    const withVsan =
+      !isEmpty(vms) &&
+      vms.some(({ value }) => {
+        return vmsById[value].diskChains.some(diskChain => {
+          return diskChain.some(disk => {
+            return disk.name.startsWith('vsan://')
+          })
+        })
+      })
     return (
       <form>
         <Row>
@@ -257,6 +282,14 @@ class EsxiImport extends Component {
             <small className='form-text text-muted'>{_('esxiImportStopOnErrorDescription')}</small>
           </InputCol>
         </Row>
+        {withVsan && (
+          <Row>
+            <LabelCol>Remote used to store temporary disk files(VSAN migration)</LabelCol>
+            <InputCol>
+              <SelectRemote required value={workDirRemote?.id} onChange={this.linkState('workDirRemote')} />
+            </InputCol>
+          </Row>
+        )}
 
         {!isEmpty(vms) && (
           <div>
@@ -269,6 +302,17 @@ class EsxiImport extends Component {
                 </div>
               </Collapse>
             ))}
+          </div>
+        )}
+        {withVsan && (
+          <div>
+            VM running from VSAN will be migrated in a three steps process
+            <ul>
+              <li>Stop the VM</li>
+              <li>Export the VM disks to a remote of Xen Orchestra</li>
+              <li>Load these disks in XCP-ng</li>
+            </ul>
+            This process will be slower than migrating the VM to VMFS / NFS datastore and then migrating them to XCP-ng
           </div>
         )}
         <div className='form-group pull-right'>
