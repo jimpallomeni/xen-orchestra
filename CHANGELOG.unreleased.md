@@ -8,6 +8,7 @@
 > Users must be able to say: “Nice enhancement, I'm eager to test it”
 
 - [Backups] Make health check timeout configurable: property `healthCheckTimeout` of config file (PR [#7561](https://github.com/vatesfr/xen-orchestra/pull/7561))
+- [XOA/Licenses] Possibility of bind/rebind XOSTOR licenses following the new licenses (PR [#7573](https://github.com/vatesfr/xen-orchestra/pull/7573))
 
 ### Bug fixes
 
@@ -38,5 +39,6 @@
 - @xen-orchestra/vmware-explorer minor
 - xo-server patch
 - xo-server-load-balancer patch
+- xo-web minor
 
 <!--packages-end-->

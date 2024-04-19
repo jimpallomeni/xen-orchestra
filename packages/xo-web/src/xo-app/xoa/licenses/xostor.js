@@ -6,30 +6,30 @@ import decorate from 'apply-decorators'
 import Icon from 'icon'
 import React from 'react'
 import SortedTable from 'sorted-table'
+import Tooltip from 'tooltip'
+import { bindLicense, rebindObjectLicense } from 'xo'
 import { confirm } from 'modal'
 import { connectStore } from 'utils'
 import { createGetObjectsOfType, createSelector } from 'selectors'
 import { filter, groupBy, keyBy, map } from 'lodash'
 import { injectState, provideState } from 'reaclette'
-import { Pool, Sr, Host } from 'render-xo-item'
+import { Host, Pool, Sr } from 'render-xo-item'
 
 import BindXostorLicensesModal from './bind-xostor-licenses-modal'
-import Tooltip from 'tooltip'
-import { bindLicense, rebindObjectLicense } from 'xo'
 
 class XostorLicensesForm extends Component {
   getAlerts = createSelector(
     () => this.props.item,
     () => this.props.userData,
     (sr, userData) => {
-      const { hosts, licensesByHostUuid, xcpngLicensebyHostUuid } = userData
+      const { hosts, licensesByHost, xcpngLicenseByHost } = userData
       const alerts = []
       const now = Date.now()
 
       const _hosts = filter(hosts, host => host.$pool === sr.$pool)
       _hosts.forEach(host => {
-        const xostorLicenses = licensesByHostUuid[host.id]
-        const xcpngLicense = xcpngLicensebyHostUuid[host.id]
+        const xostorLicenses = licensesByHost[host.id]
+        const xcpngLicense = xcpngLicenseByHost[host.id]
 
         if (xcpngLicense === undefined || xcpngLicense.expires < now) {
           alerts.push({
@@ -81,7 +81,7 @@ class XostorLicensesForm extends Component {
   bindXostorLicenses = async () => {
     const sr = this.props.item
     const hosts = groupBy(this.props.userData.hosts, '$pool')[sr.$pool]
-    const xostorLicensesByHost = this.props.userData.licensesByHostUuid
+    const xostorLicensesByHost = this.props.userData.licensesByHost
 
     const licenseByHost = await confirm({
       icon: 'connect',
@@ -154,8 +154,8 @@ const Xostor = decorate([
   })),
   provideState({
     computed: {
-      licensesByHostUuid: (state, { xostorLicenses }) => groupBy(xostorLicenses, 'boundObjectId'),
-      xcpngLicenseByHostUuid: (state, { xcpngLicenses }) => keyBy(xcpngLicenses, 'boundObjectId'),
+      licensesByHost: (state, { xostorLicenses }) => groupBy(xostorLicenses, 'boundObjectId'),
+      xcpngLicenseByHost: (state, { xcpngLicenses }) => keyBy(xcpngLicenses, 'boundObjectId'),
     },
   }),
   injectState,
@@ -163,10 +163,10 @@ const Xostor = decorate([
     <SortedTable
       collection={xostorSrs}
       columns={COLUMNS}
-      data-updateLicenses={updateLicenses}
-      data-licensesByHostUuid={state.licensesByHostUuid}
       data-hosts={hosts}
-      data-xcpngLicensebyHostUuid={state.xcpngLicenseByHostUuid}
+      data-updateLicenses={updateLicenses}
+      data-licensesByHost={state.licensesByHost}
+      data-xcpngLicenseByHost={state.xcpngLicenseByHost}
       individualActions={INDIVIDUAL_ACTIONS}
     />
   ),

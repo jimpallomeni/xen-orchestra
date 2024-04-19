@@ -2578,8 +2578,6 @@ const messages = {
   interfaceNameRequired: 'Interface name is required if a network is provided',
   interfaceNameReserved: 'This interface name is reserved',
   isTapdevsDisk: 'This is "tapdevs" disk',
-  licenseBoundUnknownXostor: 'License attached to an unknown XOSTOR',
-  licenseNotBoundXostor: 'No XOSTOR attached',
   licenseExpiredXostorWarning:
     'License{nLicenseIds, plural, one {} other {s}} {licenseIds} ha{nLicenseIds, plural, one {s} other {ve}} expired on {host}',
   networkNoPifs: 'The network does not have PIFs',

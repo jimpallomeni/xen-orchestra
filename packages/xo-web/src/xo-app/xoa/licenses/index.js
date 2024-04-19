@@ -397,7 +397,6 @@ export default class Licenses extends Component {
         <Row>
           <Col>
             <h2>{_('xostor')}</h2>
-            {console.log(this.state.licenses.xostor)}
             <Xostor
               xostorLicenses={this.state.licenses.xostor}
               xcpngLicenses={this.state.licenses.xcpng}
